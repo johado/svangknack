@@ -1,0 +1,206 @@
+<html>
+<body>
+Info:
+<div id="info">
+</div>
+
+<script>
+
+
+function shuffle(array) {
+  var currentIndex = array.length,  randomIndex;
+
+  // While there remain elements to shuffle...
+  while (currentIndex != 0) {
+
+    // Pick a remaining element...
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+
+    // And swap it with the current element.
+    [array[currentIndex], array[randomIndex]] = [
+      array[randomIndex], array[currentIndex]];
+  }
+
+  return array;
+}
+
+var card_nicenames = [];
+var colors = [ 'Hj�rter', 'Ruter', 'Kl�ver', 'Spader' ];
+
+function color_by_card(card)
+{
+  var color = 0;
+  while (card > 13) {
+    color++;
+	card -= 13;
+  }
+  return color;
+}
+
+function value_by_card(card)
+{
+  var color = 0;
+
+  while (card > 13) {
+    color++;
+	card -= 13;
+  }
+  return card;
+}
+
+function simulate(num_players, rounds)
+{
+  var info = document.getElementById('info')
+  var deckorg = [];
+  var deck = [];
+  var players = []
+
+  card_nicenames[0] = 'N/A';
+  var card = 1;
+  for (var color = 0; color < 4; color++) {
+    var value = 1;
+    while (value <= 13) {
+      card_nicenames[card] = colors[color] + ' ' + value;
+      card++;
+      value++;
+    }
+  }
+  for (var card = 1; card <= 52; card++) {
+    deckorg[card - 1] = card;
+  }
+  var dealer = 0;
+  var firstplayer = dealer + 1;
+  for (var player = 0; player < num_players; player++) {
+    players[player] = {
+      hand: [],
+      colors: [[], [], [], []],
+      in: 0,
+      out: 0
+    }
+  }
+  console.log(players)
+  for (var turn = 1; turn <= rounds; turn++) {
+    deck = Array.from(deckorg)
+    //console.log('deck',deck)
+    shuffle(deck);
+    shuffle(deck);
+    shuffle(deck);
+
+    console.log('deck', deck)
+    info.innerHTML += 'Round ' + turn + ', dealer: ' + (dealer + 1) + "<br/>\n"
+
+    for (var player = 0; player < num_players; player++) {
+      players[player].hand = []
+      players[player].colors = [[], [], [], []]
+      for (var cardnbr = 0; cardnbr < 3; cardnbr++) {
+        card = deck.shift()
+        cardcolor = color_by_card(card)
+        cardvalue = value_by_card(card)
+        players[player].hand[cardnbr] = card;
+        players[player].colors[cardcolor].push(cardvalue)
+        players[player].colors[cardcolor].sort()
+      }
+    }
+    console.log(players);
+
+    for (var player = 0; player < num_players; player++) {
+      var hand = 'Player ' + (player + 1) + ': ';
+      hand += card_nicenames[players[player].hand[0]] + ', ';
+      hand += card_nicenames[players[player].hand[1]] + ', ';
+      hand += card_nicenames[players[player].hand[2]] + ".<br/>\n";
+      console.log(hand);
+      info.innerHTML += hand;
+    }
+    var trump1 = deck.shift();
+    var trump2 = deck.shift();
+    console.log(trump1, card_nicenames[trump1]);
+    console.log(trump2, card_nicenames[trump2]);
+    var color1 = color_by_card(trump1)
+    var color2 = color_by_card(trump2)
+    var trump = color1;
+    console.log('colors ', color1, color2)
+    info.innerHTML += 'Trumfval: ' + card_nicenames[trump1] + ' (' + colors[color1] + ') or ' + card_nicenames[trump2] + ' (' + colors[color2] + ')' + "<br/>\n";
+    if (color1 != color2) {
+      /* Find best trump */
+      console.log('firstplayer: ', firstplayer)
+      console.log('firstplayer: ', players[firstplayer])
+      console.log('colors: ', players[firstplayer].colors)
+      if (players[firstplayer].colors[color1].length <
+        players[firstplayer].colors[color2].length) {
+        trump = color2
+      } else if (players[firstplayer].colors[color1].length == 1 &&
+        (players[firstplayer].colors[color1].length ==
+          players[firstplayer].colors[color2].length)) {
+        /* Choose highest */
+        if (players[firstplayer].colors[color1][0] <
+          players[firstplayer].colors[color2][0]) {
+          trump = color2
+        }
+      }
+    }
+    info.innerHTML += 'Trumf selected: ' + colors[trump] + ', got ' + players[firstplayer].colors[trump].length + "<br/>\n";
+    var sticks = []
+    for (var stick = 0; stick < 3; stick++) {
+      sticks[stick] = {}
+      var note = ''
+      var realplayer = firstplayer;
+      var card = players[realplayer].hand.pop()
+      var firstcolor = color_by_card(card)
+      var bestvalue = value_by_card(card)
+      sticks[stick].firstplayer = firstplayer
+      sticks[stick].cards = [card]
+
+      info.innerHTML += 'Stick ' + (stick + 1) + ', player ' + realplayer + ', plays: ' + card_nicenames[card] + "<br/>\n";
+
+      for (var player = 1; player < num_players; player++) {
+        note = ''
+        realplayer = firstplayer + player;
+        if (realplayer >= num_players) {
+          realplayer -= num_players;
+        }
+        /* Tvingat �verstick, annars trumf */
+        if (players[realplayer].colors[firstcolor].length) {
+          card = players[realplayer].colors[firstcolor].pop()
+          if (card > bestvalue) {
+            bestvalue = card
+          } else {
+            /* Choose lowest instead */
+            players[realplayer].colors[firstcolor].push(card)
+            card = players[realplayer].colors[firstcolor].shift()
+          }
+          card += firstcolor * 13
+
+        } else if (players[realplayer].colors[trump].length) {
+          note = 'Trumf'
+          card = players[realplayer].colors[trump].pop() + trump * 13
+
+        } else {
+          /* Sl�ng hacka */
+          note = 'Hacka'
+          for (var color = 0; color < 4; color++) {
+            if (players[realplayer].colors[color].length) {
+              card = players[realplayer].colors[color].shift() + color * 13
+            }
+          }
+        }
+
+        info.innerHTML += 'Stick ' + (stick + 1) + ', player ' + realplayer + ', plays: ' + card_nicenames[card] + ' ' + note + "<br/>\n";
+      }
+    }
+
+    /* End of turn */
+    dealer++
+    if (dealer == num_players) {
+      dealer = 0;
+    }
+    firstplayer = dealer + 1;
+    if (firstplayer == num_players) {
+      firstplayer = 0;
+    }
+  }
+}
+simulate(4, 4)
+</script>
+</body>
+</html>
