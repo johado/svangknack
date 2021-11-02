@@ -1,6 +1,10 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+</head>
 <body>
-Info:
+Info1:
 <div id="info">
 </div>
 
@@ -26,7 +30,7 @@ function shuffle(array) {
 }
 
 var card_nicenames = [];
-var colors = [ 'Hj�rter', 'Ruter', 'Kl�ver', 'Spader' ];
+var colors = [ 'Hj&auml;rter', 'Ruter', 'Kl&ouml;ver', 'Spader' ];
 
 function color_by_card(card)
 {
@@ -47,6 +51,23 @@ function value_by_card(card)
 	card -= 13;
   }
   return card;
+}
+
+function print_hands(players)
+{
+  var info = document.getElementById('info')
+  for (var player = 0; player < players.length; player++) {
+      var hand = 'Player ' + (player + 1) + ': ';
+      hand += card_nicenames[players[player].hand[0]] + ', ';
+      hand += card_nicenames[players[player].hand[1]] + ', ';
+      hand += card_nicenames[players[player].hand[2]] + ".<br/>\n";
+      //hand += colors[0] + ' ' + players[player].colors[0] + '+'
+      //hand += colors[1] + ' ' + players[player].colors[1] + '+'
+      //hand += colors[2] + ' ' + players[player].colors[2] + '+'
+      //hand += colors[3] + ' ' + players[player].colors[3] + "<br/>\n"
+      console.log(hand);
+      info.innerHTML += hand;
+  }
 }
 
 function simulate(num_players, rounds)
@@ -103,15 +124,8 @@ function simulate(num_players, rounds)
       }
     }
     console.log(players);
-
-    for (var player = 0; player < num_players; player++) {
-      var hand = 'Player ' + (player + 1) + ': ';
-      hand += card_nicenames[players[player].hand[0]] + ', ';
-      hand += card_nicenames[players[player].hand[1]] + ', ';
-      hand += card_nicenames[players[player].hand[2]] + ".<br/>\n";
-      console.log(hand);
-      info.innerHTML += hand;
-    }
+    print_hands(players)
+    var s
     var trump1 = deck.shift();
     var trump2 = deck.shift();
     console.log(trump1, card_nicenames[trump1]);
@@ -139,31 +153,41 @@ function simulate(num_players, rounds)
         }
       }
     }
-    info.innerHTML += 'Trumf selected: ' + colors[trump] + ', got ' + players[firstplayer].colors[trump].length + "<br/>\n";
+    s = 'Trumf selected: ' + colors[trump] + ', got ' + players[firstplayer].colors[trump].length + "<br/>\n";
+    info.innerHTML += s
     var sticks = []
+    leader = firstplayer
+    
     for (var stick = 0; stick < 3; stick++) {
       sticks[stick] = {}
       var note = ''
-      var realplayer = firstplayer;
+      var realplayer = leader;
       var card = players[realplayer].hand.pop()
       var firstcolor = color_by_card(card)
       var bestvalue = value_by_card(card)
-      sticks[stick].firstplayer = firstplayer
+      var besttrumf = 0
+      sticks[stick].firstplayer = leader
       sticks[stick].cards = [card]
-
-      info.innerHTML += 'Stick ' + (stick + 1) + ', player ' + realplayer + ', plays: ' + card_nicenames[card] + "<br/>\n";
-
+      players[realplayer].colors[firstcolor].splice(players[realplayer].colors[firstcolor].indexOf(bestvalue),1)
+      
+      s = 'Stick ' + (stick + 1) + ', player ' + (realplayer + 1) + ', plays: ' + card_nicenames[card] + "<br/>\n";
+      info.innerHTML += s
+      console.log(s)
+      
       for (var player = 1; player < num_players; player++) {
         note = ''
-        realplayer = firstplayer + player;
+        realplayer = realplayer + 1
         if (realplayer >= num_players) {
-          realplayer -= num_players;
+          realplayer = 0;
         }
         /* Tvingat �verstick, annars trumf */
         if (players[realplayer].colors[firstcolor].length) {
           card = players[realplayer].colors[firstcolor].pop()
+  
           if (card > bestvalue) {
             bestvalue = card
+            leader = realplayer
+            note = 'Leader!'
           } else {
             /* Choose lowest instead */
             players[realplayer].colors[firstcolor].push(card)
@@ -174,19 +198,29 @@ function simulate(num_players, rounds)
         } else if (players[realplayer].colors[trump].length) {
           note = 'Trumf'
           card = players[realplayer].colors[trump].pop() + trump * 13
-
+          if (card > besttrumf) {
+            besttrumf = card
+            note += ' Leader!'
+            leader = realplayer
+          }
         } else {
           /* Sl�ng hacka */
           note = 'Hacka'
           for (var color = 0; color < 4; color++) {
             if (players[realplayer].colors[color].length) {
-              card = players[realplayer].colors[color].shift() + color * 13
+              card = players[realplayer].colors[color].shift()
+              card += color * 13
+              break;
             }
           }
         }
-
-        info.innerHTML += 'Stick ' + (stick + 1) + ', player ' + realplayer + ', plays: ' + card_nicenames[card] + ' ' + note + "<br/>\n";
+        players[realplayer].hand.splice(players[realplayer].hand.indexOf(card),1)
+        s = 'Stick ' + (stick + 1) + ', player ' + (realplayer + 1) + ', plays: ' + card_nicenames[card] + ' ' + note + "<br/>\n";
+        info.innerHTML += s
+        console.log(s)
       }
+      info.innerHTML += 'Stick '+ (stick+1) +', Winner: '+(leader+1)+"<br/>\n";
+      //print_hands(players)
     }
 
     /* End of turn */
